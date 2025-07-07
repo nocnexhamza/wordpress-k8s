@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        DOCKER_REGISTRY = 'docker.io/your-registry' // Change to your registry
+        DOCKER_REGISTRY = 'docker.io/nocnex/wordpress-jenkins' // Change to your registry
         WORDPRESS_APP_NAME = 'wordpress'
         MYSQL_APP_NAME = 'wordpress-mysql'
         K8S_NAMESPACE = 'wordpress'
