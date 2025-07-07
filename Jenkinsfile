@@ -13,7 +13,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main', 
-                url: 'https://github.com/nocnexushamza/wordpress-k8s.git' // Change to your repo
+                url: 'https://github.com/nocnexhamza/wordpress-k8s.git' // Change to your repo
             }
         }
         
