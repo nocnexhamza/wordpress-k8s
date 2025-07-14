@@ -1,3 +1,10 @@
+# wordpress-mysql-deployment.yaml - Deployment configuration for WordPress and MySQL
+
+# =============================================
+# WordPress Deployment
+# =============================================
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,7 +29,7 @@ spec:
     spec:
       containers:
       - name: wordpress
-        image: ${DOCKER_REGISTRY}/${WORDPRESS_APP_NAME}:${BUILD_NUMBER}
+        image: nocnex/wordpress:latest  # Replaced placeholders with official WordPress image
         ports:
         - containerPort: 80
           name: wordpress
@@ -42,3 +49,53 @@ spec:
       - name: wordpress-persistent-storage
         persistentVolumeClaim:
           claimName: wordpress-pv-claim
+
+# =============================================
+# MySQL Deployment
+# =============================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress-mysql
+  namespace: wordpress
+  labels:
+    app: wordpress
+    tier: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress
+      tier: mysql
+  strategy:
+    type: Recreate  # Ensures single instance, avoids conflicts with persistent data
+  template:
+    metadata:
+      labels:
+        app: wordpress
+        tier: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0  # Using MySQL 8.0, adjust version if needed
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: nocnex@123#  # Root password for MySQL
+        - name: MYSQL_DATABASE
+          value: wordpress
+        - name: MYSQL_USER
+          value: nocnex
+        - name: MYSQL_PASSWORD
+          value: nocnex@123#
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
