@@ -147,7 +147,6 @@ stage('Scan with Trivy') {
                                 -e 's|{{BUILD_NUMBER}}|${env.BUILD_NUMBER}|g' \
                                 -e 's|{{WORDPRESS_HOST}}|${WORDPRESS_HOST}|g' \
                                 -e 's|{{MYSQL_APP_NAME}}|${MYSQL_APP_NAME}|g' \
-                                kubectl apply -f k8s/wordpress-pvc.yaml
                             k8s/wordpress-deployment.yaml > k8s/wordpress-deployment-${env.BUILD_NUMBER}.yaml
                             kubectl apply -f k8s/wordpress-deployment-${env.BUILD_NUMBER}.yaml
                             kubectl apply -f k8s/wordpress-service.yaml
