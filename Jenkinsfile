@@ -19,15 +19,23 @@ pipeline {
 
 
 stage('SonarQube Analysis') {
-            steps {
-                script {
-                    def scannerHome = tool 'SonarQubeScanner'
-                    withSonarQubeEnv('SonarQube') {
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=nodejs-project -Dsonar.sources=. -Dsonar.language=js -Dsonar.exclusions=Dockerfile -Dsonar.javascript.node.maxspace=4096"
-                    }
-                }
+    steps {
+        script {
+            def scannerHome = tool 'SonarQubeScanner'
+            withSonarQubeEnv('SonarQube') {
+                sh """
+                    ${scannerHome}/bin/sonar-scanner \
+                    -Dsonar.projectKey=wordpress-project \
+                    -Dsonar.sources=. \
+                    -Dsonar.inclusions=**/*.js \
+                    -Dsonar.exclusions=Dockerfile,wp-admin/**,wp-includes/** \
+                    -Dsonar.sourceEncoding=UTF-8 \
+                    -Dsonar.javascript.node.maxspace=8192
+                """
             }
         }
+    }
+}
         
         stage('Quality Gate') {
             steps {
