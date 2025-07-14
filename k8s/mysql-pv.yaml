@@ -1,13 +1,45 @@
-# mysql-pv.yaml
+# wordpress-mysql-pvs.yaml - PV and PVC configuration for WordPress and MySQL
+
+# =============================================
+# PersistentVolumes (Local Storage)
+# =============================================
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: wordpress-pv
+spec:
+  capacity:
+    storage: 20Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /mnt/data/wordpress
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - slave01
+
+---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: mysql-pv
 spec:
   capacity:
-    storage: 10Gi
+    storage: 20Gi
+  volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
   storageClassName: local-storage
   local:
     path: /mnt/data/mysql
@@ -18,5 +50,36 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          - slave01  # Replace with your actual node name
-  persistentVolumeReclaimPolicy: Retain
+          - slave01
+
+# =============================================
+# PersistentVolumeClaims
+# =============================================
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wordpress-pv-claim
+  namespace: wordpress
+spec:
+  storageClassName: local-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  namespace: wordpress
+spec:
+  storageClassName: local-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
