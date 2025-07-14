@@ -126,7 +126,7 @@ stage('Scan with Trivy') {
                             sed -e 's|{{MYSQL_APP_NAME}}|${MYSQL_APP_NAME}|g' \
                                 -e 's|{{K8S_NAMESPACE}}|${K8S_NAMESPACE}|g' \
                                 k8s/mysql-deployment.yaml > k8s/mysql-deployment-${env.BUILD_NUMBER}.yaml
-                            
+                            kubectl apply -f k8s/mysql-pvc.yaml
                             kubectl apply -f k8s/mysql-deployment-${env.BUILD_NUMBER}.yaml
                             kubectl apply -f k8s/mysql-service.yaml
                             kubectl rollout status -n ${K8S_NAMESPACE} deployment/${MYSQL_APP_NAME}
@@ -147,7 +147,8 @@ stage('Scan with Trivy') {
                                 -e 's|{{BUILD_NUMBER}}|${env.BUILD_NUMBER}|g' \
                                 -e 's|{{WORDPRESS_HOST}}|${WORDPRESS_HOST}|g' \
                                 -e 's|{{MYSQL_APP_NAME}}|${MYSQL_APP_NAME}|g' \
-                                k8s/wordpress-deployment.yaml > k8s/wordpress-deployment-${env.BUILD_NUMBER}.yaml
+                                kubectl apply -f k8s/wordpress-pvc.yaml
+                            k8s/wordpress-deployment.yaml > k8s/wordpress-deployment-${env.BUILD_NUMBER}.yaml
                             
                             kubectl apply -f k8s/wordpress-deployment-${env.BUILD_NUMBER}.yaml
                             kubectl apply -f k8s/wordpress-service.yaml
