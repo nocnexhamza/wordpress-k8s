@@ -16,6 +16,27 @@ pipeline {
                 url: 'https://github.com/nocnexhamza/wordpress-k8s.git' // Change to your repo
             }
         }
+
+
+stage('SonarQube Analysis') {
+            steps {
+                script {
+                    def scannerHome = tool 'SonarQubeScanner'
+                    withSonarQubeEnv('SonarQube') {
+                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=nodejs-project -Dsonar.sources=. -Dsonar.language=js -Dsonar.exclusions=Dockerfile"
+                    }
+                }
+            }
+        }
+        
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }      
+
         
         stage('Build WordPress Docker Image') {
             steps {
@@ -28,6 +49,38 @@ pipeline {
                 }
             }
         }
+
+stage('Scan with Trivy') {
+            steps {
+                script {
+                    sh label: 'Trivy Scan', script: '''#!/bin/bash
+                        set -x
+                        docker run --rm \
+                            -v /var/run/docker.sock:/var/run/docker.sock \
+                            -v "$WORKSPACE:/workspace" \
+                            aquasec/trivy image \
+                            --severity CRITICAL \
+                            --format table \
+                            --output /workspace/trivy-report.txt \
+                            "${DOCKER_REGISTRY}/${APP_NAME}:${BUILD_NUMBER}" || true
+                    '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-report.txt', allowEmptyArchive: true
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: false,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'trivy-report.txt',
+                        reportName: 'Trivy Report'
+                    ])
+                }
+            }
+        }
+
         
         stage('Push Docker Images') {
             steps {
