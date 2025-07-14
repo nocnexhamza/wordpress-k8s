@@ -1,11 +1,22 @@
+# wordpress-pv.yaml
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: PersistentVolume
 metadata:
-  name: mysql-pv-claim
-  namespace: wordpress
+  name: wordpress-pv
 spec:
+  capacity:
+    storage: 10Gi
   accessModes:
     - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
+  storageClassName: local-storage
+  local:
+    path: /mnt/data/wordpress
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - slave01  # Replace with your actual node name
+  persistentVolumeReclaimPolicy: Retain
