@@ -10,7 +10,7 @@ spec:
     - ReadWriteOnce
   storageClassName: local-storage
   local:
-    path: /mnt/data/wordpress
+    path: /mnt/data/mysql
   nodeAffinity:
     required:
       nodeSelectorTerms:
