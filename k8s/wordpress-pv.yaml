@@ -18,5 +18,5 @@ spec:
         - key: kubernetes.io/hostname
           operator: In
           values:
-          - node01  # Replace with your actual node name
+          - slave01  # Replace with your actual node name
   persistentVolumeReclaimPolicy: Retain
