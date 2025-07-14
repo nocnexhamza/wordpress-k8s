@@ -2,17 +2,17 @@ pipeline {
     agent any
     
     environment {
-        DOCKER_REGISTRY = 'docker.io/nocnex' // Change to your registry
+        DOCKER_REGISTRY = 'docker.io/nocnex' // Your Docker registry
         WORDPRESS_APP_NAME = 'wordpress'
         K8S_NAMESPACE = 'wordpress'
-        WORDPRESS_HOST = 'cpanel.nocnexus.com' // Change to your domain
+        WORDPRESS_HOST = 'cpanel.nocnexus.com' // Your domain
     }
     
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'main', 
-                url: 'https://github.com/nocnexhamza/wordpress-k8s.git' // Change to your repo
+                url: 'https://github.com/nocnexhamza/wordpress-k8s.git' // Your repo
             }
         }
 
@@ -58,17 +58,16 @@ pipeline {
         stage('Scan with Trivy') {
             steps {
                 script {
-                    sh label: 'Trivy Scan', script: '''#!/bin/bash
-                        set -x
+                    sh label: 'Trivy Scan', script: """
                         docker run --rm \
                             -v /var/run/docker.sock:/var/run/docker.sock \
-                            -v "$WORKSPACE:/workspace" \
+                            -v "\${WORKSPACE}:/workspace" \
                             aquasec/trivy image \
                             --severity CRITICAL \
                             --format table \
                             --output /workspace/trivy-report.txt \
-                            "${DOCKER_REGISTRY}/${WORDPRESS_APP_NAME}:${env.BUILD_NUMBER}" || true
-                    '''
+                            ${DOCKER_REGISTRY}/${WORDPRESS_APP_NAME}:${env.BUILD_NUMBER} || true
+                    """
                 }
             }
             post {
@@ -148,7 +147,9 @@ pipeline {
     post {
         always {
             script {
-                sh 'rm -f k8s/*-${env.BUILD_NUMBER}.yaml || true'
+                sh """
+                    rm -f k8s/wordpress-mysql-full-${env.BUILD_NUMBER}.yaml k8s/wordpress-ingress-${env.BUILD_NUMBER}.yaml || true
+                """
                 cleanWs()
             }
         }
