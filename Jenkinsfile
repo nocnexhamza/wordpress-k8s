@@ -4,7 +4,6 @@ pipeline {
     environment {
         DOCKER_REGISTRY = 'docker.io/nocnex' // Change to your registry
         WORDPRESS_APP_NAME = 'wordpress'
-        MYSQL_APP_NAME = 'wordpress-mysql'
         K8S_NAMESPACE = 'wordpress'
         WORDPRESS_HOST = 'cpanel.nocnexus.com' // Change to your domain
     }
@@ -17,25 +16,24 @@ pipeline {
             }
         }
 
-
-stage('SonarQube Analysis') {
-    steps {
-        script {
-            def scannerHome = tool 'SonarQubeScanner'
-            withSonarQubeEnv('SonarQube') {
-                sh """
-                    ${scannerHome}/bin/sonar-scanner \
-                    -Dsonar.projectKey=wordpress-project \
-                    -Dsonar.sources=. \
-                    -Dsonar.inclusions=**/*.js \
-                    -Dsonar.exclusions=Dockerfile,wp-admin/**,wp-includes/** \
-                    -Dsonar.sourceEncoding=UTF-8 \
-                    -Dsonar.javascript.node.maxspace=8192
-                """
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    def scannerHome = tool 'SonarQubeScanner'
+                    withSonarQubeEnv('SonarQube') {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=wordpress-project \
+                            -Dsonar.sources=. \
+                            -Dsonar.inclusions=**/*.js \
+                            -Dsonar.exclusions=Dockerfile,wp-admin/**,wp-includes/** \
+                            -Dsonar.sourceEncoding=UTF-8 \
+                            -Dsonar.javascript.node.maxspace=8192
+                        """
+                    }
+                }
             }
         }
-    }
-}
         
         stage('Quality Gate') {
             steps {
@@ -45,7 +43,6 @@ stage('SonarQube Analysis') {
             }
         }      
 
-        
         stage('Build WordPress Docker Image') {
             steps {
                 script {
@@ -58,7 +55,7 @@ stage('SonarQube Analysis') {
             }
         }
 
-stage('Scan with Trivy') {
+        stage('Scan with Trivy') {
             steps {
                 script {
                     sh label: 'Trivy Scan', script: '''#!/bin/bash
@@ -70,7 +67,7 @@ stage('Scan with Trivy') {
                             --severity CRITICAL \
                             --format table \
                             --output /workspace/trivy-report.txt \
-                            "${DOCKER_REGISTRY}/${APP_NAME}:${BUILD_NUMBER}" || true
+                            "${DOCKER_REGISTRY}/${WORDPRESS_APP_NAME}:${env.BUILD_NUMBER}" || true
                     '''
                 }
             }
@@ -89,7 +86,6 @@ stage('Scan with Trivy') {
             }
         }
 
-        
         stage('Push Docker Images') {
             steps {
                 script {
@@ -107,51 +103,28 @@ stage('Scan with Trivy') {
             }
         }
         
-        stage('Deploy MySQL') {
+        stage('Deploy WordPress and MySQL') {
             steps {
                 script {
                     withKubeConfig([credentialsId: 'k8s-credentials']) {
                         // Create namespace if not exists
                         sh "kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
                         
-                        // Generate MySQL password if not exists
-                        sh """
-                            if ! kubectl -n ${K8S_NAMESPACE} get secret mysql-pass >/dev/null 2>&1; then
-                                openssl rand -base64 20 | kubectl -n ${K8S_NAMESPACE} create secret generic mysql-pass --from-file=password=/dev/stdin
-                            fi
-                        """
-                        
-                        // Deploy MySQL
-                        sh """
-                            sed -e 's|{{MYSQL_APP_NAME}}|${MYSQL_APP_NAME}|g' \
-                                -e 's|{{K8S_NAMESPACE}}|${K8S_NAMESPACE}|g' \
-                                k8s/mysql-deployment.yaml > k8s/mysql-deployment-${env.BUILD_NUMBER}.yaml
-                            kubectl apply -f k8s/mysql-pv.yaml
-                            kubectl apply -f k8s/mysql-deployment-${env.BUILD_NUMBER}.yaml
-                            kubectl apply -f k8s/mysql-service.yaml
-                            kubectl rollout status -n ${K8S_NAMESPACE} deployment/${MYSQL_APP_NAME}
-                        """
-                    }
-                }
-            }
-        }
-        
-        stage('Deploy WordPress') {
-            steps {
-                script {
-                    withKubeConfig([credentialsId: 'k8s-credentials']) {
+                        // Apply Kubernetes configurations
                         sh """
                             sed -e 's|{{WORDPRESS_APP_NAME}}|${WORDPRESS_APP_NAME}|g' \
                                 -e 's|{{K8S_NAMESPACE}}|${K8S_NAMESPACE}|g' \
                                 -e 's|{{DOCKER_REGISTRY}}|${DOCKER_REGISTRY}|g' \
                                 -e 's|{{BUILD_NUMBER}}|${env.BUILD_NUMBER}|g' \
                                 -e 's|{{WORDPRESS_HOST}}|${WORDPRESS_HOST}|g' \
-                                -e 's|{{MYSQL_APP_NAME}}|${MYSQL_APP_NAME}|g' \
-                            k8s/wordpress-deployment.yaml > k8s/wordpress-deployment-${env.BUILD_NUMBER}.yaml
-                            kubectl apply -f k8s/wordpress-deployment-${env.BUILD_NUMBER}.yaml
-                            kubectl apply -f k8s/wordpress-service.yaml
-                            kubectl apply -f k8s/wordpress-ingress.yaml
-                            kubectl rollout status -n ${K8S_NAMESPACE} deployment/${WORDPRESS_APP_NAME}
+                            k8s/wordpress-mysql-full.yaml > k8s/wordpress-mysql-full-${env.BUILD_NUMBER}.yaml
+                            sed -e 's|{{WORDPRESS_HOST}}|${WORDPRESS_HOST}|g' \
+                                -e 's|{{K8S_NAMESPACE}}|${K8S_NAMESPACE}|g' \
+                            k8s/wordpress-ingress.yaml > k8s/wordpress-ingress-${env.BUILD_NUMBER}.yaml
+                            kubectl apply -f k8s/wordpress-mysql-full-${env.BUILD_NUMBER}.yaml
+                            kubectl apply -f k8s/wordpress-ingress-${env.BUILD_NUMBER}.yaml
+                            kubectl rollout status -n ${K8S_NAMESPACE} deployment/wordpress
+                            kubectl rollout status -n ${K8S_NAMESPACE} deployment/wordpress-mysql
                         """
                     }
                 }
