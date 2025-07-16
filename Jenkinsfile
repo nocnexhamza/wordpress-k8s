@@ -2,6 +2,7 @@ pipeline {
     agent any
     
     environment {
+        KUBECONFIG = credentials('k8s-kubernetes')
         DOCKER_REGISTRY = 'docker.io/nocnex' // Your Docker registry
         WORDPRESS_APP_NAME = 'wordpress'
         K8S_NAMESPACE = 'wordpress'
@@ -105,7 +106,7 @@ pipeline {
         stage('Deploy WordPress and MySQL') {
             steps {
                 script {
-                    withKubeConfig([credentialsId: 'k8s-credentials']) {
+                    withKubeConfig([credentialsId: 'k8s-kubernetes']) {
                         // Create namespace if not exists
                         sh "kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
                         
@@ -133,7 +134,7 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 script {
-                    withKubeConfig([credentialsId: 'k8s-credentials']) {
+                    withKubeConfig([credentialsId: 'k8s-kubernetes']) {
                         sh """
                             kubectl get pods,svc,ing,pvc -n ${K8S_NAMESPACE}
                             echo "WordPress should be available at http://${WORDPRESS_HOST}"
