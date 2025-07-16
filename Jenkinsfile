@@ -5,7 +5,7 @@ pipeline {
         DOCKER_REGISTRY = 'docker.io/nocnex' // Your Docker registry
         WORDPRESS_APP_NAME = 'wordpress'
         K8S_NAMESPACE = 'wordpress'
-        WORDPRESS_HOST = 'cpanel.nocnexus.com' // Your domain
+        WORDPRESS_HOST = 'wordpress.nocnexus.com' // Your domain
     }
     
     stages {
